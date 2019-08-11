@@ -1,0 +1,17 @@
+.selected.marble_on {
+  background: orange;
+}
+
+.marble_off {
+    background: #ddd;
+    border-radius: 50%;
+    height: 50px;
+    width: 50px;
+  }
+
+.marble_on {
+    background: blue;
+    border-radius: 50%;
+    height: 50px;
+    width: 50px;
+  }
