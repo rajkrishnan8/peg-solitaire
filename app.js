@@ -30,13 +30,15 @@ var Tile = function (_React$Component) {
   }, {
     key: "render",
     value: function render() {
-      var klass = "marble_on";
+      var klass = "tile ";
       if (!this.props.hasMarble) {
-        klass = "marble_off";
+        klass += "marble_off ";
+      } else {
+        klass += "marble_on ";
       }
 
       if (this.props.isSelected) {
-        klass = klass + " selected";
+        klass = klass + "selected ";
       }
 
       return React.createElement("div", { className: klass, onClick: this.clickHandler });
@@ -54,10 +56,32 @@ var Board = function (_React$Component2) {
 
     var _this2 = _possibleConstructorReturn(this, (Board.__proto__ || Object.getPrototypeOf(Board)).call(this, props));
 
+    console.log("Board constructor...");
+
+    var hasMarbles = [];
+    var count = 0;
+    var width = _this2.props.width,
+        height = _this2.props.height,
+        corner = _this2.props.corner;
+    for (var y = 0; y < _this2.props.height; y++) {
+      var hasMarblesRow = [];
+      hasMarbles.push(hasMarblesRow);
+      for (var x = 0; x < width; x++) {
+        if (x === (height - 1) / 2 && y === (width - 1) / 2) {
+          hasMarblesRow.push(false);
+        } else if ((x < corner || x >= width - 2) && (y < corner || y >= height - 2)) {
+          hasMarblesRow.push(null);
+        } else {
+          hasMarblesRow.push(true);
+          count++;
+        }
+      }
+    }
+
     _this2.state = {
       selectedTile: null,
-      count: 2,
-      hasMarbles: [true, true, false]
+      count: count,
+      hasMarbles: hasMarbles
     };
 
     _this2.clickHandler = _this2.clickHandler.bind(_this2);
@@ -67,10 +91,45 @@ var Board = function (_React$Component2) {
   _createClass(Board, [{
     key: "clickHandler",
     value: function clickHandler(x, y) {
-      var hasMarble = this.state.hasMarbles[y - 1];
+      console.log("x: " + x + ", y: " + y);
+      var hasMarble = this.state.hasMarbles[y][x];
 
-      if (!hasMarble) {
-        console.log("Tile has no marble");
+      if (!hasMarble && this.state.selectedTile) {
+        // evaluate if a marble can be removed
+        var isValidMove = false;
+        var selectedTile = this.state.selectedTile;
+        if (selectedTile.x === x) {
+          if (selectedTile.y === y + 2 || selectedTile.y === y - 2) {
+            if (this.state.hasMarbles[(selectedTile.y + y) / 2][x]) {
+              isValidMove = true;
+            }
+          }
+        } else if (selectedTile.y === y) {
+          if (selectedTile.x === x + 2 || selectedTile.x === x - 2) {
+            if (this.state.hasMarbles[y][(selectedTile.x + x) / 2]) {
+              isValidMove = true;
+            }
+          }
+        }
+
+        if (isValidMove) {
+          var midTile = {
+            x: (selectedTile.x + x) / 2,
+            y: (selectedTile.y + y) / 2
+          };
+
+          var hasMarbles = this.state.hasMarbles;
+          hasMarbles[y][x] = true;
+          hasMarbles[midTile.y][midTile.x] = false;
+          hasMarbles[selectedTile.y][selectedTile.x] = false;
+          this.setState({
+            count: this.state.count - 1,
+            hasMarbles: hasMarbles,
+            selectedTile: null
+          });
+        }
+      } else if (this.state.selectedTile && this.state.selectedTile.x === x && this.state.selectedTile.y === y) {
+        this.setState({ selectedTile: null });
       } else {
         this.setState({ selectedTile: { x: x, y: y } });
       }
@@ -78,18 +137,82 @@ var Board = function (_React$Component2) {
   }, {
     key: "isSelected",
     value: function isSelected(selectedTile, x, y) {
-      return selectedTile && selectedTile.y == y;
+      return selectedTile && selectedTile.x === x && selectedTile.y === y;
     }
   }, {
     key: "createBoard",
-    value: function createBoard(hasMarble, x, y) {
-      console.log(this);
-      this.tiles = [];
-      for (var i = 1; i <= 3; i++) {
-        this.tiles.push(React.createElement(Tile, { isSelected: this.isSelected(this.state.selectedTile, 1, i), hasMarble: this.state.hasMarbles[i - 1], notifyClick: this.clickHandler, x: 1, y: i }));
+    value: function createBoard(hasMarbles, width, height) {
+      var board = [];
+      for (var y = 0; y < height; y++) {
+        board.push(React.createElement(
+          "div",
+          null,
+          this.createRow(hasMarbles[y], width, y)
+        ));
+      }
+      return board;
+    }
+  }, {
+    key: "createRow",
+    value: function createRow(hasMarblesRow, width, y) {
+      var row = [];
+      for (var x = 0; x < width; x++) {
+        var isSelected = this.isSelected(this.state.selectedTile, x, y);
+        var hasMarble = hasMarblesRow[x];
+        if (hasMarble === null) {
+          row.push(React.createElement("div", { className: "tile" }));
+        } else {
+          row.push(React.createElement(Tile, { isSelected: isSelected, hasMarble: hasMarble, notifyClick: this.clickHandler, x: x, y: y }));
+        }
       }
 
-      return this.tiles;
+      return row;
+    }
+  }, {
+    key: "isGameOver",
+    value: function isGameOver(hasMarbles) {
+      var height = hasMarbles.length,
+          width = hasMarbles[0].length;
+
+      function validMove(x, y, xDir, yDir) {
+        var hopX = x + 2 * xDir;
+        var hopY = y + 2 * yDir;
+        if (hopX < 0 || hopX >= width || hopY < 0 || hopY >= height) {
+          return false;
+        }
+        return hasMarbles[y + yDir][x + xDir] && hasMarbles[y + 2 * yDir][x + 2 * xDir];
+      }
+
+      for (var y = 0; y < height; y++) {
+        for (var x = 0; x < width; x++) {
+          if (hasMarbles[y][x] === false) {
+            if (validMove(x, y, -1, 0) || validMove(x, y, 1, 0) || validMove(x, y, 0, -1) || validMove(x, y, 0, 1)) {
+              return false;
+            }
+          }
+        }
+      }
+
+      return true;
+    }
+  }, {
+    key: "createWinLoss",
+    value: function createWinLoss(hasMarbles, count) {
+      if (this.isGameOver(hasMarbles)) {
+        if (this.state.count === 1) {
+          return React.createElement(
+            "div",
+            { "class": "message won" },
+            "\"YOU WON!!!!\""
+          );
+        } else {
+          return React.createElement(
+            "div",
+            { "class": "message lost" },
+            "\"YOU LOST!!!!\""
+          );
+        }
+      }
     }
   }, {
     key: "render",
@@ -97,7 +220,8 @@ var Board = function (_React$Component2) {
       return React.createElement(
         "div",
         null,
-        this.createBoard()
+        this.createBoard(this.state.hasMarbles, this.props.width, this.props.height),
+        this.createWinLoss(this.state.hasMarbles, this.state.count)
       );
     }
   }]);
@@ -106,4 +230,4 @@ var Board = function (_React$Component2) {
 }(React.Component);
 
 var domContainer = document.querySelector('#app');
-ReactDOM.render(e(Board), domContainer);
+ReactDOM.render(React.createElement(Board, { width: 7, height: 7, corner: 2 }), domContainer);

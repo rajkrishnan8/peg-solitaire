@@ -1,17 +1,39 @@
+.message.lost {
+  color: red;
+}
+
+.message.won {
+  color: green;
+}
+
+body {
+  margin: 100px;
+}
+
+div#app {
+  width: 350px;
+  height: 350px;
+  padding: 50px;
+  margin: auto;
+  border-radius: 50%;
+  background: grey;  
+}
+
+div.tile {
+  display: inline-block;
+  height: 50px;
+  width: 50px;
+  border-radius: 50%;
+}
+
 .selected.marble_on {
   background: orange;
 }
 
 .marble_off {
     background: #ddd;
-    border-radius: 50%;
-    height: 50px;
-    width: 50px;
   }
 
 .marble_on {
     background: blue;
-    border-radius: 50%;
-    height: 50px;
-    width: 50px;
   }
